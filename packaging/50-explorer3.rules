@@ -1,0 +1,10 @@
+// Explorer 3 drives the Wi-Fi through NetworkManager, as the Cardputer drives
+// its own: the list of networks, joining one, creating the Explorer3 network.
+// Members of the netdev group (the Pi's first user is one) may do so without
+// a password, also from the console where the game can start by itself
+// (sudo explorer3-autostart on). Removed with the package.
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 && subject.isInGroup("netdev")) {
+        return polkit.Result.YES;
+    }
+});

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Explorer 3
+Comment=Escape game: crash on Mars
+Comment[fr]=Escape game : crash sur Mars
+Exec=explorer3
+Icon=explorer3
+Terminal=false
+Categories=Game;

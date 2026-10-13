@@ -1,0 +1,104 @@
+#!/bin/sh
+# Explorer 3 starts by itself when the Pi is switched on (user's choice:
+# off by default, switched with this command).
+#
+#   sudo explorer3-autostart on      for the user who runs sudo
+#   sudo explorer3-autostart off
+#   explorer3-autostart status
+#
+# With a desktop (Raspberry Pi OS's default target is graphical): the game is
+# added to that user's desktop autostart. Without (Raspberry Pi OS Lite): a
+# service runs it on the first console (tty1) instead of the login prompt,
+# which comes back when the game is quit (Ctrl+Q, Start + Select).
+set -e
+
+SERVICE=/etc/systemd/system/explorer3.service
+
+user_home() {
+    getent passwd "$1" | cut -d: -f6
+}
+
+status() {
+    if [ -f "$SERVICE" ] && systemctl is-enabled --quiet explorer3.service 2>/dev/null; then
+        echo "on (console, $(sed -n 's/^User=//p' "$SERVICE"))"
+        return
+    fi
+    for h in /home/* /root; do
+        if [ -f "$h/.config/autostart/explorer3.desktop" ]; then
+            echo "on (desktop, $(basename "$h"))"
+            return
+        fi
+    done
+    echo "off"
+}
+
+off() {
+    if [ -f "$SERVICE" ]; then
+        systemctl disable --quiet explorer3.service 2>/dev/null || true
+        rm -f "$SERVICE"
+        systemctl daemon-reload
+    fi
+    for h in /home/* /root; do
+        rm -f "$h/.config/autostart/explorer3.desktop"
+    done
+}
+
+on() {
+    user=${SUDO_USER:-}
+    if [ -z "$user" ] || [ "$user" = root ]; then
+        echo "Run it with sudo from the account that plays: sudo explorer3-autostart on" >&2
+        exit 1
+    fi
+    home=$(user_home "$user")
+    off
+    if [ "$(systemctl get-default)" = graphical.target ]; then
+        mkdir -p "$home/.config/autostart"
+        cp /usr/share/applications/explorer3.desktop "$home/.config/autostart/explorer3.desktop"
+        chown -R "$user:" "$home/.config/autostart"
+        echo "Explorer 3 starts with $user's desktop."
+    else
+        cat > "$SERVICE" <<UNIT
+[Unit]
+Description=Explorer 3 (escape game) on the console
+After=systemd-user-sessions.service network-online.target sound.target
+Wants=network-online.target
+Conflicts=getty@tty1.service
+
+[Service]
+User=$user
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+ExecStart=/usr/bin/explorer3
+# The game quit: the login prompt comes back on tty1
+ExecStopPost=+/bin/systemctl --no-block start getty@tty1.service
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+        systemctl daemon-reload
+        systemctl enable --quiet explorer3.service
+        echo "Explorer 3 starts on the console (tty1) as $user, from the next start-up."
+    fi
+}
+
+case "$1" in
+    on)
+        [ "$(id -u)" = 0 ] || { echo "sudo explorer3-autostart on" >&2; exit 1; }
+        on
+        ;;
+    off)
+        [ "$(id -u)" = 0 ] || { echo "sudo explorer3-autostart off" >&2; exit 1; }
+        off
+        echo "Explorer 3 no longer starts by itself."
+        ;;
+    status) status ;;
+    *)
+        echo "usage: sudo explorer3-autostart on|off, or explorer3-autostart status" >&2
+        exit 2
+        ;;
+esac
