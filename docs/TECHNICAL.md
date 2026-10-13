@@ -23,7 +23,7 @@
 
 One program, `explorer3`, for the **Raspberry Pi 3** and **Pi 400** under Raspberry Pi OS, with all the game's features. The game is the Cardputer's ([Escape-Game-Cardputer](https://github.com/RyoSaeba89/Escape-Game-Cardputer) v3.0.0): `src/main.cpp` is **compiled for Linux**, as its PC simulator and [Explorer3-Android](https://github.com/RyoSaeba89/Explorer3-Android) already do. Mission control is in this repository (`src/control/`). This port does not modify the game: it is read from its folder, and what changes for the Pi is applied to copies at build time. Most of the Pi code comes from Explorer3-Android (game thread, memory panel, speaker, on-screen keyboard, role menu, crew server, mission control).
 
-**Status (2026-10-13)**: code written, not yet compiled nor tried on a Pi.
+**Version 3.0.0 (2026-10-13)**: for game v3.0.0. Built by GitHub Actions (arm64 and armhf, no warning), not tried on a Pi yet.
 
 ## 2. Decisions
 
@@ -218,7 +218,7 @@ Depends: SDL2, NetworkManager, dnsmasq-base, avahi-utils, iw, libcap2-bin.
 
 ## 13. Tests
 
-None yet. To do: build in WSL (amd64 version in a window, then the `.deb`), then on a Pi 3 and a Pi 400: Solo with the keyboard and with each gamepad; Crew with a browser, an Android device; Mission control facing a Cardputer, an Android device; Explorer3 network with a phone (captive portal); Ethernet; desktop and Lite; `explorer3-autostart` both ways.
+None yet: v3.0.0 is only built (GitHub Actions, arm64 and armhf). To do on a Pi 3 and a Pi 400: Solo with the keyboard and with each gamepad; Crew with a browser, an Android device; Mission control facing a Cardputer, an Android device; Explorer3 network with a phone (captive portal); Ethernet; desktop and Lite; `explorer3-autostart` both ways.
 
 ## 14. Next steps
 

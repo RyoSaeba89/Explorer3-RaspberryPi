@@ -4,7 +4,7 @@
 
 **EN** — The game [Escape Game Explorer 3](https://github.com/RyoSaeba89/Escape-Game-Cardputer) on the **Raspberry Pi 3** and **Raspberry Pi 400**, with all its features: **Solo** mode, and **Multiplayer** where the Pi is either the **Crew** (it plays; a web browser or another device is mission control) or **Mission control** (it is the screen, facing a Cardputer, an Android device or another Pi). Keyboard or gamepad, French or English.
 
-> **En cours / Work in progress** — pour le jeu v3.0.0. Pas encore essayé sur un Pi. / for game v3.0.0. Not tried on a Pi yet.
+> **Version 3.0.0 (2026-10-13)** — pour le jeu v3.0.0. Compilée, pas encore essayée sur un Pi. / for game v3.0.0. Built, not tried on a Pi yet.
 
 ## Installation
 

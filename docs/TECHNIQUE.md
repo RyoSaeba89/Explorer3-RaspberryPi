@@ -23,7 +23,7 @@
 
 Un seul programme, `explorer3`, pour le **Raspberry Pi 3** et le **Pi 400** sous Raspberry Pi OS, avec toutes les fonctions du jeu. Le jeu est celui du Cardputer ([Escape-Game-Cardputer](https://github.com/RyoSaeba89/Escape-Game-Cardputer) v3.0.0) : `src/main.cpp` est **compilé pour Linux**, comme le font déjà son simulateur PC et [Explorer3-Android](https://github.com/RyoSaeba89/Explorer3-Android). Le centre de contrôle est dans ce dépôt (`src/control/`). Ce portage ne modifie pas le jeu : il est lu dans son dossier, et ce qui change pour le Pi est appliqué à des copies au moment de compiler. L'essentiel du code Pi vient d'Explorer3-Android (fil du jeu, écran en mémoire, haut-parleur, clavier à l'écran, menu des rôles, serveur de l'équipage, centre de contrôle).
 
-**État (2026-10-13)** : code écrit, pas encore compilé ni essayé sur un Pi.
+**Version 3.0.0 (2026-10-13)** : pour le jeu v3.0.0. Compilée par GitHub Actions (arm64 et armhf, sans avertissement), pas encore essayée sur un Pi.
 
 ## 2. Décisions
 
@@ -218,7 +218,7 @@ Dépendances : SDL2, NetworkManager, dnsmasq-base, avahi-utils, iw, libcap2-bin.
 
 ## 13. Essais
 
-Aucun pour l'instant. À faire : compiler dans WSL (version amd64 dans une fenêtre, puis le `.deb`), puis sur un Pi 3 et un Pi 400 : Solo au clavier et avec chaque manette ; Équipage avec un navigateur, un appareil Android ; Centre de contrôle face à un Cardputer, un appareil Android ; réseau Explorer3 avec un téléphone (portail captif) ; Ethernet ; bureau et Lite ; `explorer3-autostart` dans les deux sens.
+Aucun pour l'instant : la v3.0.0 est seulement compilée (GitHub Actions, arm64 et armhf). À faire sur un Pi 3 et un Pi 400 : Solo au clavier et avec chaque manette ; Équipage avec un navigateur, un appareil Android ; Centre de contrôle face à un Cardputer, un appareil Android ; réseau Explorer3 avec un téléphone (portail captif) ; Ethernet ; bureau et Lite ; `explorer3-autostart` dans les deux sens.
 
 ## 14. Suite
 

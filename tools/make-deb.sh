@@ -22,7 +22,8 @@ case "$("${CROSS}gcc" -dumpmachine)" in
 esac
 VERSION=${VERSION:-dev}
 VERSION=${VERSION#v}
-case "$VERSION" in [0-9]*) ;; *) VERSION="0.0~$VERSION" ;; esac
+# a version tag (v3.0.0...); else (commit hash, "dev") below any version
+case "$VERSION" in [0-9]*.[0-9]*) ;; *) VERSION="0.0~$VERSION" ;; esac
 VERSION=$(echo "$VERSION" | tr '_' '~')
 
 ROOT=$BUILD/deb
