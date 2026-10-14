@@ -1,11 +1,15 @@
 // Explorer 3 on the Raspberry Pi (3, 400): the display thread. One SDL
-// window, full screen, from the desktop or from the console without a desktop
-// (SDL's KMSDRM). It shows either the game (game.cpp, the Cardputer's game on
-// its own thread) or mission control (control/), turns the keyboard and the
-// gamepads into the game's keys, and plays the sound.
+// window, on the desktop or on the console without a desktop (SDL's KMSDRM,
+// always full screen). It shows either the game (game.cpp, the Cardputer's
+// game on its own thread) or mission control (control/), turns the keyboard
+// and the gamepads into the game's keys, and plays the sound.
 //
-//   explorer3            full screen
-//   explorer3 --window   in a window (tests)
+// On the desktop (user's choice): a 1280 x 720 window; F11 switches to full
+// screen and back, and the choice is kept for the next time (window.conf).
+//
+//   explorer3               as last time (a window the first time)
+//   explorer3 --window      in a window
+//   explorer3 --fullscreen  full screen
 //
 // Quit (user's choice): Ctrl+Q, Alt+F4 on the desktop, or Start + Select
 // together on a gamepad.
@@ -26,7 +30,7 @@
 #include "input.h"
 #include "labels.h"
 #include "netctl.h"
-#include "role_menu.h"
+#include "control_link.h"
 
 extern "C" {
 #include "control.h"
@@ -43,6 +47,12 @@ namespace {
 std::atomic<bool> controlMode(false);  // the window shows mission control
 std::string configDir;
 int audioLatencyMs = 50;
+SDL_Window *window = nullptr;
+bool fullScreen = false;
+bool console = false;  // no desktop (KMSDRM): always full screen
+
+constexpr int WINDOW_W = 1280;
+constexpr int WINDOW_H = 720;
 
 // ---------------------------------------------------------------- files
 
@@ -62,6 +72,47 @@ std::string makeConfigDir() {
     std::string dir = base + "/explorer3";
     mkdir(dir.c_str(), 0700);
     return dir;
+}
+
+// window.conf: "fullscreen=1" when F11 last chose full screen
+bool loadFullScreen() {
+    FILE *f = fopen((configDir + "/window.conf").c_str(), "r");
+    if (!f) {
+        return false;
+    }
+    char line[64];
+    bool on = false;
+    while (fgets(line, sizeof(line), f)) {
+        if (strncmp(line, "fullscreen=", 11) == 0) {
+            on = line[11] == '1';
+        }
+    }
+    fclose(f);
+    return on;
+}
+
+void saveFullScreen(bool on) {
+    std::string path = configDir + "/window.conf";
+    FILE *f = fopen((path + ".tmp").c_str(), "w");
+    if (!f) {
+        return;
+    }
+    fprintf(f, "fullscreen=%d\n", on ? 1 : 0);
+    fclose(f);
+    rename((path + ".tmp").c_str(), path.c_str());
+}
+
+// ---------------------------------------------------------------- window
+
+// Full screen or a window; the mouse pointer only shows in a window
+void setFullScreen(bool on) {
+    fullScreen = on || console;
+    SDL_SetWindowFullscreen(window, fullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    if (!fullScreen) {
+        SDL_SetWindowSize(window, WINDOW_W, WINDOW_H);
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    }
+    SDL_ShowCursor(fullScreen ? SDL_DISABLE : SDL_ENABLE);
 }
 
 // ---------------------------------------------------------------- sound
@@ -236,6 +287,13 @@ void key(const SDL_KeyboardEvent &e, bool down) {
     if (down && ctrl && k == SDLK_q) {
         quit();
     }
+    if (k == SDLK_F11) {
+        if (down && !e.repeat && !console) {
+            setFullScreen(!fullScreen);
+            saveFullScreen(fullScreen);
+        }
+        return;
+    }
     labels::setStyle(labels::KEYBOARD);
     control_style(labels::KEYBOARD);
     if (controlMode) {
@@ -317,21 +375,21 @@ void openControl() {
     controlMode = true;
 }
 
-// Back from mission control: the game's menu, without the crew's page server
+// Back from mission control: the game goes back to its role menu
 void closeControl() {
     controlMode = false;
-    role::endControl();
-    input::push(input::KEY_ESC);  // "connect the screen" -> Wi-Fi list
-    input::push(input::KEY_ESC);  // Wi-Fi list -> mode menu
+    control_link::finish();
 }
 
 }  // namespace
 
 int main(int argc, char **argv) {
-    bool windowed = false;
+    int asked = -1;  // --window 0, --fullscreen 1, otherwise as last time
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--window") == 0) {
-            windowed = true;
+            asked = 0;
+        } else if (strcmp(argv[i], "--fullscreen") == 0) {
+            asked = 1;
         } else if (strcmp(argv[i], "--version") == 0) {
             printf("explorer3 %s\n", EXPLORER3_VERSION);
             return 0;
@@ -349,9 +407,13 @@ int main(int argc, char **argv) {
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {
         fprintf(stderr, "explorer3: no sound (%s)\n", SDL_GetError());
     }
-    Uint32 flags = windowed ? SDL_WINDOW_RESIZABLE : SDL_WINDOW_FULLSCREEN_DESKTOP;
-    SDL_Window *win = SDL_CreateWindow("Explorer 3", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 960, 540,
-                                       flags | SDL_WINDOW_ALLOW_HIGHDPI);
+    configDir = makeConfigDir();
+    const char *driver = SDL_GetCurrentVideoDriver();
+    console = driver && strcmp(driver, "KMSDRM") == 0;
+    bool full = console || (asked >= 0 ? asked == 1 : loadFullScreen());
+    Uint32 flags = SDL_WINDOW_RESIZABLE | (full ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    SDL_Window *win = SDL_CreateWindow("Explorer 3", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_W,
+                                       WINDOW_H, flags | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!win) {
         fprintf(stderr, "explorer3: %s\n", SDL_GetError());
         return 1;
@@ -365,13 +427,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "explorer3: %s\n", SDL_GetError());
         return 1;
     }
-    if (!windowed) {
-        SDL_ShowCursor(SDL_DISABLE);
-    }
+    window = win;
+    fullScreen = full;
+    SDL_ShowCursor(full ? SDL_DISABLE : SDL_ENABLE);
     SDL_StartTextInput();
     sd_init(ren);
 
-    configDir = makeConfigDir();
     netctl::init();
     game::start(configDir + "/settings.txt");
     openAudio();
@@ -411,7 +472,7 @@ int main(int argc, char **argv) {
                 default: break;
             }
         }
-        if (role::controlRequested()) {
+        if (control_link::requested()) {
             openControl();  // mission control: the network is up
         }
         int w = 0, h = 0;

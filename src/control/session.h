@@ -4,8 +4,9 @@
  * session_feed() all it receives. The session:
  *   - checks the handshake (ws.c);
  *   - applies the picture (rows.c), follows the clock (clocksync.c), the
- *     pages and the maze theme (panel.c), the banner (banner.c), the
- *     language and the sound (sound.c);
+ *     pages and the maze theme (panel.c) and the language;
+ *   - hands the banner and the sound (messages B, T, S, R) to the caller's
+ *     function, each device showing and playing them its own way;
  *   - prepares a pong for each ping (s->out), which the caller sends;
  *   - tells when to close: stream error, server closing, handshake too slow
  *     (SESSION_HS_MS) or silence (SESSION_SILENCE_MS).
@@ -19,16 +20,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "banner.h"
 #include "clocksync.h"
 #include "msg.h"
 #include "panel.h"
 #include "rows.h"
-#include "sound.h"
 #include "ws.h"
 
 #define SESSION_HS_MS      10000   /* 101 response expected within 10 s */
 #define SESSION_SILENCE_MS 30000   /* 30 s without a byte */
+
+/* Messages B, T, S and R, once the clock has taken them into account. */
+typedef void (*session_media_fn)(void *ctx, const msg_t *m, const clocksync_t *clk, uint32_t now);
 
 enum {
     SES_IDLE,        /* no connection */
@@ -65,23 +67,26 @@ typedef struct {
     rows_dirty_t dirty;
     clocksync_t  clk;
     panel_t      panel;
-    banner_t     banner;
     int          lang;       /* 0 French, 1 English (message L) */
     bool         lang_known; /* a message L arrived */
-    sound_t      sound;      /* notes and rumble (T, S, R); goes on from one connection to the next */
+
+    session_media_fn media;  /* banner and sound */
+    void            *media_ctx;
 
     /* counts, since session_begin */
     uint32_t frames, texts;
     uint32_t bad_panels;     /* K messages refused: a game of another version? */
 } session_t;
 
-/* Once, at start: black screen, French, no page. */
-void session_init(session_t *s);
+/* Once, at start: black screen, French, no page. media: called for the
+ * messages B, T, S and R (ctx given back). */
+void session_init(session_t *s, session_media_fn media, void *ctx);
 
 /* New connection (the socket has just opened): writes the request into req
  * (cap bytes) and returns its length, or an error. nonce: 16 bytes that
- * change at each connection. The clock, the page, the theme and the banner
- * start again: the crew sends its whole state to each new connection. */
+ * change at each connection. The clock, the page and the theme start again
+ * (the caller clears its banner): the crew sends its whole state to each new
+ * connection. */
 int session_begin(session_t *s, uint32_t now, const char *host, unsigned port,
                   const uint8_t nonce[16], char *req, size_t cap);
 

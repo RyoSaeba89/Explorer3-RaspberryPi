@@ -4,14 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 
-void session_init(session_t *s)
+void session_init(session_t *s, session_media_fn media, void *ctx)
 {
     memset(s, 0, sizeof(*s));
     s->state = SES_IDLE;
+    s->media = media;
+    s->media_ctx = ctx;
     panel_init(&s->panel);
-    banner_init(&s->banner);
     clocksync_reset(&s->clk);
-    sound_init(&s->sound);
     /* black screen: all of it to be shown once */
     for (int y = 0; y < SCR_H; y++)
         s->dirty.bits[y >> 5] |= 1u << (y & 31);
@@ -30,7 +30,6 @@ int session_begin(session_t *s, uint32_t now, const char *host, unsigned port,
     ws_rx_init(&s->rx);
     clocksync_reset(&s->clk);
     panel_init(&s->panel);
-    banner_init(&s->banner);
     int n = ws_hs_request(&s->hs, req, cap, host, port, "/", nonce);
     if (n < 0) {
         s->state = SES_CLOSED;
@@ -85,7 +84,7 @@ static void on_text(session_t *s, const char *t, size_t len)
         panel_theme(&s->panel, &m);
         break;
     case 'B':
-        banner_update(&s->banner, &m, s->now);
+        s->media(s->media_ctx, &m, &s->clk, s->now);
         break;
     case 'L':
         s->lang = m.lang;
@@ -94,10 +93,10 @@ static void on_text(session_t *s, const char *t, size_t len)
     case 'T':
     case 'S':
         panel_sound(&s->panel, &m, &s->clk);
-        sound_message(&s->sound, &m, &s->clk);
+        s->media(s->media_ctx, &m, &s->clk, s->now);
         break;
     case 'R':
-        sound_message(&s->sound, &m, &s->clk);
+        s->media(s->media_ctx, &m, &s->clk, s->now);
         break;
     default:   /* P: the clock only */
         break;

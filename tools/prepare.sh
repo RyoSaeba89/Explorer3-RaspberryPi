@@ -39,6 +39,10 @@ sed -f "$T/pi-game.sed" "$GAME/src/main.cpp" | cat - "$HERE/src/bridge.inc" > "$
 grep -q 'return padText(t, lang);' "$OUT/main.cpp.new" || fail "tools/pi-game.sed no longer applies (tr)"
 grep -q '^const char \*padText(Tx &t, int l);' "$OUT/main.cpp.new" || fail "tools/pi-game.sed no longer applies (padText)"
 grep -q 'return tr(multiMode ? multi : solo);' "$OUT/main.cpp.new" || fail "tools/pi-game.sed no longer applies (trm)"
+grep -q '^#include "controle.h"$' "$OUT/main.cpp.new" || fail "the game no longer includes controle.h (mission control role)"
+if grep -q 'controle/\|textes_controle' "$OUT/main.cpp.new"; then
+    fail "tools/pi-game.sed no longer applies (the game's own mission control)"
+fi
 keep "$OUT/main.cpp"
 
 # ---- texts: keyboard, Xbox, PlayStation

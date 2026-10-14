@@ -21,25 +21,29 @@
 
 ## 1. But et état
 
-Un seul programme, `explorer3`, pour le **Raspberry Pi 3** et le **Pi 400** sous Raspberry Pi OS, avec toutes les fonctions du jeu. Le jeu est celui du Cardputer ([Escape-Game-Cardputer](https://github.com/RyoSaeba89/Escape-Game-Cardputer) v3.0.0) : `src/main.cpp` est **compilé pour Linux**, comme le font déjà son simulateur PC et [Explorer3-Android](https://github.com/RyoSaeba89/Explorer3-Android). Le centre de contrôle est dans ce dépôt (`src/control/`). Ce portage ne modifie pas le jeu : il est lu dans son dossier, et ce qui change pour le Pi est appliqué à des copies au moment de compiler. L'essentiel du code Pi vient d'Explorer3-Android (fil du jeu, écran en mémoire, haut-parleur, clavier à l'écran, menu des rôles, serveur de l'équipage, centre de contrôle).
+Un seul programme, `explorer3`, pour le **Raspberry Pi 3** et le **Pi 400** sous Raspberry Pi OS, avec toutes les fonctions du jeu. Le jeu est celui du Cardputer ([Escape-Game-Cardputer](https://github.com/RyoSaeba89/Escape-Game-Cardputer) v4.0.0) : `src/main.cpp` est **compilé pour Linux**, comme le font déjà son simulateur PC et [Explorer3-Android](https://github.com/RyoSaeba89/Explorer3-Android). Le centre de contrôle est dans ce dépôt (`src/control/`) ; son cœur réseau est celui du jeu (`src/controle/` d'Escape-Game-Cardputer, recopié à l'identique), le même que sur Android. Ce portage ne modifie pas le jeu : il est lu dans son dossier, et ce qui change pour le Pi est appliqué à des copies au moment de compiler. L'essentiel du code Pi vient d'Explorer3-Android (fil du jeu, écran en mémoire, haut-parleur, clavier à l'écran, serveur de l'équipage, centre de contrôle).
 
-**Version 3.0.0 (2026-10-13)** : pour le jeu v3.0.0. Compilée par GitHub Actions (arm64 et armhf, sans avertissement), pas encore essayée sur un Pi.
+**Version 3.0.0 (2026-10-13)** : pour le jeu v3.0.0. Compilée par GitHub Actions (arm64 et armhf, sans avertissement), essayée sur un Pi 400.
+
+**Version 4.0.0** : le même numéro que le jeu et Explorer3-Android, qui jouent ensemble. Fenêtre 1280 × 720 par défaut, F11 pour le plein écran (choix gardé) ; le menu des rôles est celui du jeu (`role_menu.cpp` supprimé) ; centre de contrôle : adresse tapée prise pendant la recherche, « réessayer » qui refait la sonde ; équipage : connexions muettes coupées après 10 s.
 
 ## 2. Décisions
 
-Prises par l'utilisateur le 2026-10-13. À ne pas rouvrir sans raison nouvelle.
+Prises par l'utilisateur le 2026-10-13 (avec l'unification des trois versions). À ne pas rouvrir sans raison nouvelle.
 
 | Sujet | Décision |
 |---|---|
 | Machines | Raspberry Pi 3 et Pi 400, Raspberry Pi OS **Bookworm et Trixie, 32 bits (armhf) et 64 bits (arm64)**. |
-| Lancement | **Les deux** : une application du bureau (menu, plein écran) et, sans bureau (Raspberry Pi OS Lite), directement sur la console (KMSDRM de SDL). |
+| Lancement | **Les deux** : une application du bureau (menu) et, sans bureau (Raspberry Pi OS Lite), directement sur la console (KMSDRM de SDL, plein écran). |
+| Fenêtre | Sur le bureau, **une fenêtre de 1280 × 720** par défaut ; **F11** passe en plein écran et retour, choix gardé (`window.conf`). |
 | Démarrage avec le Pi | `sudo explorer3-autostart on` / `off`, **désactivé par défaut**. |
 | Commandes | **Clavier** (les touches du Cardputer) **et manettes** (Xbox, PlayStation, 8BitDo et génériques), clavier à l'écran comme sur Android. |
 | Aides à l'écran | **Celles du dernier appareil utilisé** : touches du clavier, A B X Y (Xbox, 8BitDo), × ○ □ △ (PlayStation), qui changent toutes seules. |
 | Pause (Fn × 3) | **Ctrl × 3** au clavier (Fn n'est pas lisible), **Start** à la manette. |
 | Quitter | **Ctrl+Q** (et Alt+F4 sur le bureau), **Start + Select** ensemble à la manette. |
-| Mot « Cardputer » | **Nulle part** dans les textes, comme sur Android (« Cardputer seul » devient « Solo »). |
-| Rôles | Solo, Équipage et Centre de contrôle, comme sur Android. |
+| Mot « Cardputer » | **Nulle part** dans les textes, comme sur Android (« Solo », comme le jeu depuis la v4.0.0). |
+| Rôles | Solo, Équipage et Centre de contrôle ; le menu des rôles est celui du jeu, le même sur le Cardputer, Android et le Pi. |
+| Versions | Un seul numéro de version pour le jeu, Android et le Pi ; une release par projet ; dépôts séparés. |
 | Réseau | **Comme le Cardputer** : liste des Wi-Fi et mot de passe dans le jeu, Ethernet, **réseau Explorer3 avec portail captif**. |
 | Ports de l'équipage | **80 et 81**, comme le Cardputer : adresse sans port, `explorer3.local`. Accordés à l'installation (`setcap`), jamais en root. |
 | Installation | **.deb** compilé par GitHub Actions à chaque version (arm64 et armhf), `sudo apt install ./explorer3_<v>_<arch>.deb`. |
@@ -50,7 +54,7 @@ Prises par l'utilisateur le 2026-10-13. À ne pas rouvrir sans raison nouvelle.
 
 `tools/fetch-deps.sh` met dans `deps/` les versions de `tools/versions.sh` :
 
-- **Escape-Game-Cardputer** v3.0.0 (`src/`, et `sim/include`, les en-têtes Arduino du simulateur) ;
+- **Escape-Game-Cardputer** v4.0.0 (`src/`, et `sim/include`, les en-têtes Arduino du simulateur) ;
 - **M5GFX** 0.2.32, comme le firmware du Cardputer et Explorer3-Android.
 
 Des copies locales peuvent servir à la place : `make GAME_DIR=... GFX_DIR=.../src`.
@@ -80,18 +84,16 @@ Réglages : plateforme `LGFX_LINUX_FB` de M5GFX (l'écran en mémoire de `displa
 | `src/input.cpp`, `input.h` | Touches et boutons changés en appuis du clavier du Cardputer |
 | `src/labels.cpp`, `labels.h` | Dernier appareil utilisé : aides clavier, Xbox ou PlayStation |
 | `src/onscreen_keyboard.cpp` | Clavier à l'écran (celui d'Android, plus une page de texte) |
-| `src/role_menu.cpp` | Choix du rôle après « Multijoueur » |
-| `src/bridge.h`, `bridge.inc` | Lit l'état du jeu et choisit les textes (ajouté à la copie de `main.cpp`) |
-| `src/mirror_pi.cpp`, `sha1.h` | `mirror::` : le serveur de l'équipage (page, flux, portail captif) |
+| `src/bridge.h`, `bridge.inc` | Lit l'état du jeu et choisit les textes (ajouté à la copie de `main.cpp`) ; rôle Centre de contrôle du jeu (`controle::`) |
+| `src/controle.h`, `control_link.cpp` | Rôle Centre de contrôle : à la place du centre de contrôle du Cardputer, le jeu demande l'écran du centre de contrôle du Pi et revient à son menu des rôles quand on le quitte |
+| `src/mirror_pi.cpp`, `sha1.h` | `mirror::` : le serveur de l'équipage (page, flux, portail captif, `stopServer()`) |
 | `src/netctl.cpp`, `netctl.h` | NetworkManager (nmcli) : état, liste des Wi-Fi, connexion, réseau Explorer3, `explorer3.local` |
 | `src/control/control.c` | Centre de contrôle : boucle principale (celle d'Android sans Java) |
-| `src/control/session.c`, `ws.c`, `msg.c`, `rows.c`, `clocksync.c` | Protocole : WebSocket, messages, lignes d'image, horloge de l'équipage |
-| `src/control/panel.c`, `banner.c`, `sound.c` | Pages (règles, énigmes, labyrinthe et son thème, clavier codé), bandeau de fin, son |
+| `src/control/session.c`, `ws.c`, `msg.c`, `rows.c`, `clocksync.c`, `panel.c`, `net.c`, `addr.c` | Cœur réseau, copie à l'identique de `src/controle/` du jeu (testé par son `make -C tests`), aussi sur Android : WebSocket, messages, lignes d'image, horloge de l'équipage, état des pages, recherche, adresses |
+| `src/control/panel_draw.c`, `banner.c`, `sound.c` | Dessin des pages (règles, énigmes, labyrinthe et son thème, clavier codé), bandeau de fin, son |
 | `src/control/draw.c`, `text.c`, `texts.c`, `font_8x16.c` | Dessin sur la toile 960 x 540, textes (ceux de la page), police 8x16 |
 | `src/control/gamedata.h` | Morse, astronaute et symboles, lus dans le jeu (`bridge.inc`) |
-| `src/control/addr.c` | Adresses IPv4 et saisie de l'adresse |
 | `src/control/sdl_draw.c` | SDL_Renderer pour `draw.h`, et la copie nette d'un écran 240 x 135 |
-| `src/control/net.c` | Connexion à l'équipage et recherche sur le réseau (celles d'Android) |
 | `src/control/ui.c` | Écrans du centre de contrôle avant le flux (ceux d'Android, touches du Pi) |
 | `tools/prepare.sh`, `tools/*.sed`, `page-texts.awk` | Modifications pour le Pi des copies du jeu et de sa page ; textes du centre de contrôle tirés de la page |
 | `tools/fetch-deps.sh`, `versions.sh` | Sources nécessaires, versions exactes |
@@ -101,12 +103,12 @@ Réglages : plateforme `LGFX_LINUX_FB` de M5GFX (l'écran en mémoire de `displa
 
 `main.cpp` est compilé avec les en-têtes du simulateur PC du jeu (`sim/include`), sauf `M5Cardputer.h` et `Preferences.h`, remplacés par ceux de `src/include`. Copies faites par `tools/prepare.sh` :
 
-- `main.cpp` : `tools/pi-game.sed` (trois lignes : `tr()` et `trm()` passent par `padText()`, section 6), puis `src/bridge.inc` ajouté à la fin ;
+- `main.cpp` : `tools/pi-game.sed` (`tr()` et `trm()` passent par `padText()`, section 6 ; le centre de contrôle du Cardputer et son cœur sont laissés de côté), puis `src/bridge.inc` ajouté à la fin ;
 - `textes.h`, `textes_xbox.h`, `textes_ps.h` et `texts_table.inc` (section 6) ;
 - `mots.h`, `dessins.h`, `diffusion.h` tels quels ;
 - `page.inc` : la page du centre de contrôle, prise dans `diffusion.cpp`, `tools/pi-page.sed` (pas de « Cardputer », règle 4 sans nom de touche).
 
-Comme sur Android : `M5Cardputer.Display` est un écran en mémoire de 240 x 135 (`offset_rotation = 3` annule le `setRotation(1)` du jeu) ; juste après chaque image (`mirror::unlockScreen()`), l'image est copiée, le menu des rôles et le clavier à l'écran sont dessinés par-dessus, et un numéro d'image avance ; le fil d'affichage la montre quand le numéro a changé. Le jeu tourne sur son propre fil tant que le programme tourne.
+Comme sur Android : `M5Cardputer.Display` est un écran en mémoire de 240 x 135 (`offset_rotation = 3` annule le `setRotation(1)` du jeu) ; juste après chaque image (`mirror::unlockScreen()`), l'image est copiée, le clavier à l'écran est dessiné par-dessus, et un numéro d'image avance ; le fil d'affichage la montre quand le numéro a changé. Le jeu tourne sur son propre fil tant que le programme tourne.
 
 **Mémoire** : `~/.config/explorer3/settings.txt` (langue, record, nom et mot de passe du Wi-Fi, comme la NVS du Cardputer), lisible par son seul propriétaire. Un réseau où le Pi est déjà compte comme le réseau mémorisé (`Preferences.h`) : « Multijoueur » y va alors directement, comme le Cardputer avec son Wi-Fi mémorisé.
 
@@ -116,7 +118,7 @@ Comme sur Android : `M5Cardputer.Display` est un écran en mémoire de 240 x 135
 
 Les textes du jeu existent en trois versions, toutes faites à partir de `src/textes.h` :
 
-- **clavier** (`textes`) : `tools/pi-texts.sed` seulement. Les noms des touches du Cardputer restent (ENTRÉE, ESC, TAB, DEL, ESPACE : le clavier d'un Pi les a) ; « Cardputer seul » devient « Solo », « Tout le jeu sur cet appareil » ; « Fn Fn Fn » devient « Ctrl Ctrl Ctrl » ; « CONNEXION AU WI-FI » devient « CONNEXION AU RÉSEAU » (Ethernet aussi) ; « Mémoire insuffisante » devient « Port 80 ou 81 déjà utilisé » (un Pi ne manque pas de mémoire à cet endroit, mais un autre programme peut tenir les ports) ;
+- **clavier** (`textes`) : `tools/pi-texts.sed` seulement. Les noms des touches du Cardputer restent (ENTRÉE, ESC, TAB, DEL, ESPACE : le clavier d'un Pi les a) ; « Fn Fn Fn » devient « Ctrl Ctrl Ctrl » ; « CONNEXION AU WI-FI » devient « CONNEXION AU RÉSEAU » (Ethernet aussi) ; « Mémoire insuffisante » devient « Port 80 ou 81 déjà utilisé » (un Pi ne manque pas de mémoire à cet endroit, mais un autre programme peut tenir les ports) ;
 - **Xbox** (`textes_xbox`) et **PlayStation** (`textes_ps`) : ensuite `tools/pad-texts.sed` (celui d'Explorer3-Android), dont les marques deviennent :
 
 | Marque | Rôle | Xbox, 8BitDo | PlayStation |
@@ -151,7 +153,7 @@ Le style (Xbox ou PlayStation) vient de `SDL_GameControllerGetType()` ; chaque t
 
 **Clavier à l'écran** (`onscreen_keyboard.cpp`) : celui d'Android (lettres des énigmes de Morse, lettres du QCM, code de démarrage, clavier codé), plus une page de **texte** pour le nom et le mot de passe du Wi-Fi : trois rangées de caractères (a–z, A–Z ou symboles), puis ABC (majuscules), #+= (symboles), espace, ← (effacer) et OK. À la manette, il s'ouvre tout seul pour le code, le clavier codé et la saisie du Wi-Fi ; il se ferme dès qu'on se sert du clavier.
 
-**Choix du rôle** (`role_menu.cpp`, celui d'Android, touches de l'appareil utilisé) : valider « Multijoueur » ouvre « Équipage » / « Centre de contrôle ». Dans les deux cas le jeu continue vers ses écrans du réseau (section 8). En centre de contrôle, `startServer()` ne démarre rien, et quand le jeu arrive sur « Connecter l'écran » (le réseau est là), `input.cpp` demande l'écran du centre de contrôle ; en sortir ramène le jeu à son menu (deux Échap).
+**Choix du rôle** : c'est le menu des rôles du jeu (`St::Role`), le même que sur le Cardputer et Android. Dans les deux cas le jeu continue vers ses écrans du réseau (section 8). En centre de contrôle, quand le réseau est là, le `controle::start()` de `bridge.inc` ferme le serveur d'une partie en équipage (`mirror::stopServer()`) et demande l'écran du centre de contrôle (`control_link`, lu par `main.cpp`) ; le quitter ramène le jeu à son menu des rôles.
 
 ## 8. Réseau
 
@@ -173,7 +175,7 @@ Droits : `packaging/50-explorer3.rules` (polkit) laisse les membres du groupe `n
 - `ws://<adresse>:81/` : poignée de main WebSocket, lignes d'écran compressées (25 images/s au plus, seulement les lignes changées, tout l'écran à chaque nouvelle connexion sauf le bandeau), messages `P` (horloge, 250 ms), `T` `S` `R` (son), `K` (pages), `L` (langue), `B` (bandeau), `M` (thème du labyrinthe) ; ping toutes les 5 s, déconnexion après 2 sans réponse ; 5 navigateurs au plus ;
 - **portail captif** sur le réseau Explorer3 : une requête dont le `Host` n'est ni 192.168.4.1 ni `explorer3.local` reçoit un 302 vers `http://192.168.4.1/` (`/sym.js` est toujours servi, la recherche du centre de contrôle en a besoin).
 
-Les ports sont ouverts par le fil réseau à la demande du jeu (`startServer`), les deux ou aucun : si un autre programme tient le 80 ou le 81, le jeu affiche « Port 80 ou 81 déjà utilisé » sur sa liste des Wi-Fi. Fermés quand ce Pi devient centre de contrôle.
+Les ports sont ouverts par le fil réseau à la demande du jeu (`startServer`), les deux ou aucun : si un autre programme tient le 80 ou le 81, le jeu affiche « Port 80 ou 81 déjà utilisé » sur sa liste des Wi-Fi. Fermés quand ce Pi devient centre de contrôle (`stopServer`). Une connexion au port 81 qui ne fait pas sa poignée de main en 10 s est fermée : elle ne garde pas une des 5 places.
 
 ## 10. Multijoueur : le Centre de contrôle
 
@@ -186,15 +188,15 @@ Tout est dans `src/control/`, en C pur sauf `sdl_draw.c`, `net.c` et `control.c`
 - **Police** : `font_8x16.c`, la police 8x16 (page de code 437) de [libogc2](https://github.com/extremscorner/libogc2), copiée telle quelle avec sa licence zlib ; `text.c` convertit l'UTF-8.
 
 
-- **Recherche** (`net.c`, celle d'Android, sur son propre fil) : les 254 adresses du /24 du Pi, ports **81** (Cardputer, Pi) et **8081** (équipage Android), vérifiés par `GET /sym.js` sur le 80 ou le 8080. Un équipage trouvé : connexion tout de suite ; plusieurs : liste ; aucun : chercher encore ou taper l'adresse.
-- **Saisie d'adresse** (`addr.c`) : flèches, ±1 ; L / R ou - / +, ±10.
+- **Recherche** (`net.c`, celle d'Android, sur son propre fil) : les 254 adresses du /24 du Pi, ports **81** (Cardputer, Pi) et **8081** (équipage Android), vérifiés par `GET /sym.js` sur le 80 ou le 8080. Un équipage trouvé : connexion tout de suite ; plusieurs : liste ; aucun : chercher encore ou taper l'adresse. La recherche reprend à chaque ouverture du centre de contrôle.
+- **Saisie d'adresse** (`addr.c`) : flèches, ±1 ; L / R ou - / +, ±10. Une adresse tapée pendant la recherche la remplace au paquet suivant. Si la sonde échoue, « réessayer » la refait (le port n'est pas encore connu).
 - **Flux** : copie de l'écran et pages ; reconnexion toute seule ; Retour revient à la recherche, puis au menu du jeu.
 - **Touches** dessinées comme celles de l'appareil utilisé : touches du clavier (Entrée, Échap, Tab, - +), Xbox A B Y LB RB, symboles PlayStation L1 R1.
 - Réglages : `~/.config/explorer3/control.conf` (lignes `ip=` : dernière adresse qui a répondu, `lang=` : langue).
 
 ## 11. Affichage et son
 
-**Affichage** (`main.cpp`, `control/sdl_draw.c`) : une fenêtre SDL, `SDL_WINDOW_FULLSCREEN_DESKTOP` (`--window` pour les essais), SDL_Renderer (OpenGL ES sur le Pi ; KMSDRM sans bureau), synchro verticale. L'image du jeu, comme la copie de l'écran de l'équipage, est agrandie un nombre entier de fois k **sans lissage** dans une texture cible, puis amenée à sa taille finale (le plus grand 16:9 qui tient, centré) **avec lissage** : seuls les bords des gros pixels s'adoucissent (méthode d'Android). Le centre de contrôle dessine une toile 960 x 540 agrandie pour tenir : rectangles, et police 8x16 agrandie 4 fois puis lissée. Le pointeur de la souris est caché en plein écran.
+**Affichage** (`main.cpp`, `control/sdl_draw.c`) : une fenêtre SDL de 1280 × 720 sur le bureau, ou `SDL_WINDOW_FULLSCREEN_DESKTOP` après F11 (choix gardé dans `~/.config/explorer3/window.conf` ; `--window` et `--fullscreen` l'imposent ; toujours plein écran sans bureau), SDL_Renderer (OpenGL ES sur le Pi ; KMSDRM sans bureau), synchro verticale. L'image du jeu, comme la copie de l'écran de l'équipage, est agrandie un nombre entier de fois k **sans lissage** dans une texture cible, puis amenée à sa taille finale (le plus grand 16:9 qui tient, centré) **avec lissage** : seuls les bords des gros pixels s'adoucissent (méthode d'Android). Le centre de contrôle dessine une toile 960 x 540 agrandie pour tenir : rectangles, et police 8x16 agrandie 4 fois puis lissée. Le pointeur de la souris est caché en plein écran.
 
 **Son** : une sortie SDL, 48 kHz stéréo, blocs de 1024 trames. Le haut-parleur du jeu (`audio.cpp`, mélangeur d'Android : 8 canaux, notes sinus, échantillons bruts en boucle) ou, en centre de contrôle, la synthèse de `control/sound.c`, ancrée à « maintenant + 2 blocs ». Cette dernière est calculée en permanence pour que son horloge reste juste. En multijoueur, le jeu de l'équipage envoie ses sons au centre de contrôle, comme sur le Cardputer.
 
@@ -218,8 +220,12 @@ Dépendances : SDL2, NetworkManager, dnsmasq-base, avahi-utils, iw, libcap2-bin.
 
 ## 13. Essais
 
-Aucun pour l'instant : la v3.0.0 est seulement compilée (GitHub Actions, arm64 et armhf). À faire sur un Pi 3 et un Pi 400 : Solo au clavier et avec chaque manette ; Équipage avec un navigateur, un appareil Android ; Centre de contrôle face à un Cardputer, un appareil Android ; réseau Explorer3 avec un téléphone (portail captif) ; Ethernet ; bureau et Lite ; `explorer3-autostart` dans les deux sens.
+**Version 3.0.0** (utilisateur, 2026-10-13) : essayée sur un Pi 400 ; demande d'une fenêtre au lieu du plein écran (faite en v4.0.0).
+
+**Version 4.0.0** (utilisateur, 2026-10-14) : « pas de grosse anomalie » sur la version 4 (appareils essayés non précisés). Les corrections faites ensuite (recherche, « réessayer », connexions muettes, Makefile) sont compilées pour le Pi (paquets arm64 et armhf), pas essayées sur un Pi.
+
+**Pas d'essai noté** : Pi 3 ; manettes une à une ; Raspberry Pi OS Lite et `explorer3-autostart` ; réseau Explorer3 avec un téléphone (portail captif).
 
 ## 14. Suite
 
-- Première compilation et essais (section 13).
+- Essais de la section 13 qui restent.

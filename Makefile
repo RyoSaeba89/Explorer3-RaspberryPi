@@ -34,9 +34,9 @@ LDFLAGS  += -Wl,--gc-sections
 LDLIBS   := $(SDL_LIBS) -lpthread -lm
 
 PI_SRC   := audio.cpp display_m5gfx.cpp game.cpp input.cpp labels.cpp main.cpp mirror_pi.cpp netctl.cpp \
-            onscreen_keyboard.cpp role_menu.cpp
-CTRL_SRC := addr.c banner.c clocksync.c control.c draw.c font_8x16.c msg.c net.c panel.c rows.c sdl_draw.c \
-            session.c sound.c text.c texts.c ui.c ws.c
+            onscreen_keyboard.cpp control_link.cpp
+CTRL_SRC := addr.c banner.c clocksync.c control.c draw.c font_8x16.c msg.c net.c panel.c panel_draw.c rows.c \
+            sdl_draw.c session.c sound.c text.c texts.c ui.c ws.c
 GFX_SRC  := $(wildcard $(GFX_DIR)/lgfx/v1/*.cpp) $(GFX_DIR)/lgfx/v1/panel/Panel_M5HDMI.cpp
 GFX_CSRC := $(wildcard $(GFX_DIR)/lgfx/utility/*.c) $(wildcard $(GFX_DIR)/lgfx/Fonts/efont/*.c) \
             $(wildcard $(GFX_DIR)/lgfx/Fonts/IPA/*.c)
@@ -87,4 +87,5 @@ clean:
 
 .PHONY: all deb clean
 
--include $(shell find $(BUILD) -name '*.d' 2>/dev/null)
+# files only: the .deb tree has a dnsmasq-shared.d folder
+-include $(shell find $(BUILD) -name '*.d' -type f 2>/dev/null)

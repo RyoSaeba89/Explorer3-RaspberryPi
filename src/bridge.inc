@@ -4,6 +4,7 @@
 // Only reads the game's state, and gives tr() the text of the device in use.
 #include "bridge.h"
 #include "control/gamedata.h"
+#include "control_link.h"
 #include "labels.h"
 #include "textes_xbox.h"
 #include "textes_ps.h"
@@ -71,14 +72,6 @@ bool wifiList() {
     return state == St::WifiList;
 }
 
-bool atAddress() {
-    return state == St::Address;
-}
-
-bool multiplayerSelected() {
-    return state == St::Mode && modeSel == 1 && !paused;
-}
-
 int language() {
     return lang;
 }
@@ -88,6 +81,39 @@ uint32_t screenId() {
 }
 
 }  // namespace bridge
+
+// The game's mission control role: once the network is up (the game's
+// startControl()), the Pi's own control screen takes over; the game waits
+// behind it and goes back to its role menu when it closes.
+namespace mirror {
+void stopServer();  // mirror_pi.cpp
+}
+
+namespace {
+namespace controle {
+
+void start() {
+    mirror::stopServer();  // a crew's page server from an earlier game: off
+    control_link::request();
+}
+
+bool key(const KeysState &) {
+    return true;  // the keys go to the control screen meanwhile
+}
+
+bool update(uint32_t) {
+    return !control_link::finished();
+}
+
+void draw(uint32_t) {
+    canvas.fillScreen(C_SPACE);
+}
+
+void stop() {
+}
+
+}  // namespace controle
+}  // namespace
 
 // Mission control draws the game's own pictures (control/gamedata.h): the
 // same as on the crew's screen and in the web page's /sym.js.

@@ -6,3 +6,9 @@
 s/^const char \*tr(Tx &t) {$/const char *padText(Tx \&t, int l);\n\nconst char *tr(Tx \&t) {/
 s/^    return t\[lang\];$/    return padText(t, lang);/
 s/^    return multiMode ? multi\[lang\] : solo\[lang\];$/    return tr(multiMode ? multi : solo);/
+
+# The Cardputer's own mission control is not built: the game's role menu
+# opens the Pi's (src/controle.h, bridge.inc; user's choice U1). Its core
+# (the game's src/controle/) and its texts are left out of the copy.
+/^extern "C" {$/,/^}$/d
+/^#include "textes_controle.h"$/d

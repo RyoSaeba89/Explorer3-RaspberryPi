@@ -1,6 +1,7 @@
 /* Mission control's pages, as the web page shows them (panel(), majPage(),
  * horloge(), labyrinthe(), theme() and the #tab CSS of the game's
- * diffusion.cpp). Pure: drawn through draw.h.
+ * diffusion.cpp). Pure. panel.c holds the state; panel_draw.c draws it
+ * through draw.h where the page's layout is used (Android, Pi).
  *
  * They replace the screen copy during the rules, the 4 puzzles and the coded
  * keypad (message K, see msg.h). For the puzzles and the keypad, the O2
@@ -21,7 +22,8 @@
 #include "clocksync.h"
 #include "msg.h"
 
-#define PANEL_BIPS 8   /* Morse beeps kept for the loudspeaker (page 3) */
+#define PANEL_BIPS 8       /* Morse beeps kept for the loudspeaker (page 3) */
+#define PANEL_FLASH_MS 500  /* red error flash (the page's "err" animation) */
 
 typedef struct {
     uint32_t start, end;   /* local times */
@@ -81,7 +83,23 @@ void panel_theme(panel_t *p, const msg_t *m);
  * (bip() of the page); a stop of channel 2 or of all clears them. */
 void panel_sound(panel_t *p, const msg_t *m, const clocksync_t *clk);
 
-/* Draws the page over the whole canvas. lang: 0 French, 1 English.
+/* O2 left at local time now (ms). */
+uint32_t panel_remaining(const panel_t *p, uint32_t now);
+
+/* Age of the red error flash (0 to PANEL_FLASH_MS - 1 ms), -1 outside it. */
+int panel_flash_age(const panel_t *p, uint32_t now);
+
+/* Page 3: the loudspeaker lights while a Morse beep sounds. */
+bool panel_speaker_on(const panel_t *p, uint32_t now);
+
+/* Clues of a line of 5 cells, as lineClues() of the game and indices() of
+ * the page: a single 0 for an empty line. */
+pic_clues_t panel_line_clues(const bool cells[PIC_N]);
+
+/* Picross: row (row = true) or column i matches its clues (green). */
+bool panel_pic_ok(const panel_t *p, bool row, int i);
+
+/* panel_draw.c (devices drawing the web page's layout): draws the page over the whole canvas. lang: 0 French, 1 English.
  * Nothing for the screen copy. */
 void panel_draw(const panel_t *p, uint32_t now, int lang);
 

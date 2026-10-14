@@ -28,14 +28,6 @@ uint32_t screenId();
 // The game's Wi-Fi list (refresh with the gamepad's left button)
 bool wifiList();
 
-// "Connect the screen": the network is up (as mission control, the control
-// screen takes over there)
-bool atAddress();
-
-// Mode menu with "Multiplayer" selected: confirming first asks which role
-// this Pi plays (role_menu.h)
-bool multiplayerSelected();
-
 // Game language: 0 French, 1 English
 int language();
 

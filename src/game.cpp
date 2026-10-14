@@ -19,7 +19,6 @@
 #include "bridge.h"
 #include "display.h"
 #include "onscreen_keyboard.h"
-#include "role_menu.h"
 
 void setup();
 void loop();
@@ -158,7 +157,6 @@ void publish() {
     std::lock_guard<std::mutex> g(pictureLock);
     copy(picture);
     lastLanguage = bridge::language();
-    role::draw(picture, lastLanguage);
     osk::draw(picture);
     pictureCount++;
 }

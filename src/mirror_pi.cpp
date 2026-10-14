@@ -29,7 +29,6 @@
 
 #include "display.h"
 #include "netctl.h"
-#include "role_menu.h"
 #include "sha1.h"
 
 // The Cardputer's page: const char PAGE[] (made by tools/prepare.sh)
@@ -46,6 +45,7 @@ constexpr uint32_t FRAME_MS = 40;         // 25 pictures/s at most
 constexpr uint32_t CLOCK_MS = 250;        // game clock for the sound
 constexpr uint32_t PING_MS = 5000;        // heartbeat, as on the Cardputer
 constexpr int MISSED_PONGS = 2;
+constexpr uint32_t HANDSHAKE_MS = 10000;  // to ask for the stream once connected
 constexpr size_t FRAME_BUF = 12 * 1024;   // a picture may go in several messages
 constexpr int MAX_H = 135;
 
@@ -54,6 +54,7 @@ struct Client {
     bool open = false;  // handshake done
     std::string in;     // bytes received, not yet used
     int missed = 0;     // pings without a pong
+    uint32_t since = 0; // connected at (millis)
 };
 
 std::mutex screenMutex;   // the game's canvas, drawn by the game thread
@@ -76,7 +77,7 @@ std::string symbolsJs = "const SYM=[];";
 std::atomic<int> clients(0);
 std::atomic<int> pageThreads(0);
 
-// Server on / off, asked by the game thread or the role menu, done by the
+// Server on / off, asked by the game thread, done by the
 // network thread (it alone touches the listening sockets)
 std::mutex requestLock;
 std::condition_variable requestDone;
@@ -540,6 +541,7 @@ void netThread() {
                         timeval st = {3, 0};
                         setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &st, sizeof st);
                         slot->fd = fd;
+                        slot->since = millis();
                     }
                 }
             }
@@ -561,6 +563,11 @@ void netThread() {
             }
         }
         uint32_t now = millis();
+        for (Client &c : conns) {
+            if (c.fd >= 0 && !c.open && now - c.since > HANDSHAKE_MS) {
+                dropClient(c);  // connected but silent: its place goes to the next browser
+            }
+        }
         if ((int32_t)(now - nextName) >= 0) {  // explorer3.local follows the address
             nextName = now + 2000;
             netctl::announce(netctl::status().ip);
@@ -682,8 +689,7 @@ String ipAddress() {
 
 // ---------------------------------------------------------------- server
 
-// The page server, unless this Pi is mission control: the game then only
-// leads the way to a network, and the control screen takes over (input.cpp)
+// The page server (crew role; as mission control the game never starts it)
 bool startServer(const uint16_t *screen, int w, int h) {
     {
         std::lock_guard<std::mutex> g(screenMutex);
@@ -691,13 +697,10 @@ bool startServer(const uint16_t *screen, int w, int h) {
         screenW = w;
         screenH = std::min(h, MAX_H);
     }
-    if (role::controlRole()) {
-        return true;
-    }
     return ask(Request::Open, true);
 }
 
-// No server while this Pi is mission control (role_menu.cpp)
+// No server while this Pi is mission control (bridge.inc, controle::start)
 void stopServer() {
     ask(Request::Close, false);
 }

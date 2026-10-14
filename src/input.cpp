@@ -1,7 +1,7 @@
 // Turns keys and gamepad buttons into Cardputer key presses. The display
 // thread queues codes; the game thread reads them in
-// Keyboard_Class::updateKeysState(), so the on-screen keyboard, the role menu
-// and the game's state (bridge.h) are only ever touched by the game thread.
+// Keyboard_Class::updateKeysState(), so the on-screen keyboard and the
+// game's state (bridge.h) are only ever touched by the game thread.
 //
 // Keyboard: the Cardputer's keys, as in the PC simulator (arrows = ; . , /,
 // Escape = `), Ctrl = Fn.
@@ -20,7 +20,6 @@
 #include "bridge.h"
 #include "labels.h"
 #include "onscreen_keyboard.h"
-#include "role_menu.h"
 
 namespace {
 
@@ -29,8 +28,7 @@ std::deque<int> codes;          // from the display thread
 std::deque<KeysState> presses;  // for the game, game thread only
 
 uint32_t lastScreen = 0;
-bool dismissed = false;      // keyboard closed by the player on this screen: no reopening by itself
-bool controlAsked = false;   // the control screen was asked for (mission control role)
+bool dismissed = false;  // keyboard closed by the player on this screen: no reopening by itself
 
 KeysState character(char c) {
     KeysState k;
@@ -118,50 +116,11 @@ bool keyboardButton(int code) {
     }
 }
 
-void click() {
-    M5Cardputer.Speaker.tone(1200, 25, 1, true);  // the game's sfxClick()
-}
-
-// The role menu (after "Multiplayer") takes every key while it is open
-bool roleButton(int code) {
-    if (!role::isOpen()) {
-        if ((code == input::CONFIRM || code == input::KEY_ENTER) && bridge::multiplayerSelected()) {
-            role::open();
-            click();
-            return true;
-        }
-        return false;
-    }
-    switch (code) {
-        case input::UP:
-        case input::KEY_UP: role::move(-1); click(); break;
-        case input::DOWN:
-        case input::KEY_DOWN: role::move(1); click(); break;
-        case input::CONFIRM:
-        case input::KEY_ENTER:
-            role::close();
-            if (role::selected() == role::CONTROL) {
-                role::chooseControl();  // the network first, then the control screen
-            }
-            controlAsked = false;
-            presses.push_back(special(&KeysState::enter));  // the game goes on into Multiplayer
-            break;
-        case input::BACK:
-        case input::KEY_ESC:
-            role::close();
-            click();
-            break;
-        default:
-            break;
-    }
-    return true;
-}
-
 void handle(int code) {
     if (isKeyboard(code) && osk::isOpen()) {
         osk::close();  // typing on the keyboard: no need for the on-screen one
     }
-    if (roleButton(code) || keyboardButton(code)) {
+    if (keyboardButton(code)) {
         return;
     }
     bool typing = bridge::entry() == bridge::Entry::Text;  // arrows would type ; . , /
@@ -227,20 +186,13 @@ void handle(int code) {
 
 // The on-screen keyboard follows the screen: closed on a new screen or when
 // the screen no longer takes this kind of entry, opened by itself where the
-// gamepad has to type. As mission control, the control screen takes over once
-// the game reaches "connect the screen" (the network is up).
+// gamepad has to type.
 void followScreen() {
     uint32_t screen = bridge::screenId();
     if (screen != lastScreen) {
         lastScreen = screen;
         dismissed = false;
         osk::close();
-    }
-    if (!role::controlRole()) {
-        controlAsked = false;
-    } else if (!controlAsked && bridge::atAddress()) {
-        controlAsked = true;
-        role::requestControl();
     }
     bridge::Entry e = bridge::entry();
     if (osk::isOpen() && osk::mode() != e) {
